@@ -1,0 +1,13 @@
+---
+- name: Remove a user and revoke sudo
+  hosts: all
+  become: true
+  roles:
+    - role: pastir.users
+      vars:
+        user_names:
+          - user: alice
+            sudo: false
+            auth_key: true
+          - user: bob
+            state: absent

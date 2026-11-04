@@ -1,9 +1,25 @@
 ---
-- name: Include tasks defined variables.
-  ansible.builtin.include_tasks: "defined/main.yml"
+- name: Validate input
+  ansible.builtin.assert:
+    that:
+      - ssh_users | rejectattr('user', 'defined') | list | length == 0
+      - ssh_users | map(attribute='user') | list | unique | length == ssh_users | length
+    fail_msg: Every item of ssh_users needs a unique "user".
+    quiet: true
+  tags: [users]
 
-- name: Include tasks user management
-  ansible.builtin.include_tasks: "./user_management.yml"
-  loop: "{{ ssh_users }}"
+- name: Manage present users
+  ansible.builtin.include_tasks: user_present.yml
+  loop: "{{ __users_present }}"
   loop_control:
-    label: "{{ item.user }}"
+    loop_var: u
+    label: "{{ u.user }}"
+  tags: [users]
+
+- name: Remove absent users
+  ansible.builtin.include_tasks: user_absent.yml
+  loop: "{{ __users_absent }}"
+  loop_control:
+    loop_var: u
+    label: "{{ u.user }}"
+  tags: [users]

@@ -1,0 +1,5 @@
+---
+__users_present: >-
+  {{ ssh_users | rejectattr('state', 'defined') | list
+     + (ssh_users | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | list) }}
+__users_absent: "{{ ssh_users | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"

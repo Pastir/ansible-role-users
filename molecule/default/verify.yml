@@ -1,0 +1,28 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Alice exists without sudo, bob is gone
+      ansible.builtin.shell: |
+        id alice
+        ! id bob
+        test ! -e /etc/sudoers.d/alice
+        test ! -e /etc/sudoers.d/bob
+        test ! -d /home/bob
+      changed_when: false
+
+    - name: Alice has her key and git access
+      ansible.builtin.shell: |
+        set -eo pipefail
+        grep -q molecule-test-only /home/alice/.ssh/authorized_keys
+        test "$(stat -c %a /home/alice/.ssh/id_rsa.git)" = 400
+        grep -q 'IdentityFile ~/.ssh/id_rsa.git' /home/alice/.ssh/config
+        id -nG alice | grep -qw adm
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Sudoers files are valid
+      ansible.builtin.command: visudo -c
+      changed_when: false

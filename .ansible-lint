@@ -1,0 +1,6 @@
+---
+profile: production
+exclude_paths:
+  - .idea/
+  - molecule/default/Dockerfile.j2
+  - molecule/default/keys/

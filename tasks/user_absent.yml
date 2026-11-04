@@ -1,0 +1,11 @@
+---
+- name: "Remove sudo rights of {{ u.user }}"
+  community.general.sudoers:
+    name: "{{ u.user | replace('.', '') }}"
+    state: absent
+
+- name: "Remove user {{ u.user }}"
+  ansible.builtin.user:
+    name: "{{ u.user }}"
+    state: absent
+    remove: "{{ users_remove_home }}"

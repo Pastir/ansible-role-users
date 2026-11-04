@@ -1,0 +1,90 @@
+---
+- name: "Create user {{ u.user }}"
+  ansible.builtin.user:
+    name: "{{ u.user }}"
+    shell: "{{ u.shell | default(users_default_shell) }}"
+    comment: "{{ u.comment | default(omit) }}"
+    groups: >-
+      {{ u.groups if u.groups is defined
+         else ((u.append | default('')).split(',') | map('trim') | select | list) }}
+    append: true
+    create_home: true
+  register: __user
+
+- name: "Authorized keys of {{ u.user }}"
+  ansible.posix.authorized_key:
+    user: "{{ u.user }}"
+    key: >-
+      {{ ((([lookup('ansible.builtin.file', ssh_directory_users_keys ~ '/' ~ u.user ~ '/' ~ u.user ~ '.pub')])
+          if u.auth_key | default(false) else []) + u.get('keys', [])) | join('\n') }}
+    exclusive: "{{ u.exclusive_keys | default(false) }}"
+    state: present
+  when: u.auth_key | default(false) or u.get('keys', []) | length > 0
+
+- name: "Sudo rights of {{ u.user }}"
+  community.general.sudoers:
+    name: "{{ u.user | replace('.', '') }}"
+    user: "{{ u.user }}"
+    commands: ALL
+    nopassword: true
+    state: "{{ 'present' if u.sudo | default(false) else 'absent' }}"
+
+- name: "Key pair of {{ u.user }}"
+  when: u.path_key_pair is defined
+  block:
+    - name: "Create key pair directory of {{ u.user }}"
+      ansible.builtin.file:
+        path: "{{ u.path_key_pair }}"
+        state: directory
+        owner: "{{ u.user }}"
+        group: "{{ __user.group | default(u.user) }}"
+        mode: "0700"
+
+    - name: "Copy key pair of {{ u.user }}"
+      ansible.builtin.copy:
+        src: "{{ ssh_directory_users_keys }}/{{ u.user }}/{{ item.src }}"
+        dest: "{{ u.path_key_pair }}/{{ item.dest }}"
+        owner: "{{ u.user }}"
+        group: "{{ __user.group | default(u.user) }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - {src: "{{ u.user }}", dest: id_rsa, mode: "0400"}
+        - {src: "{{ u.user }}.pub", dest: id_rsa.pub, mode: "0444"}
+      loop_control:
+        label: "{{ item.dest }}"
+      no_log: true
+
+- name: "Git access of {{ u.user }}"
+  when: u.git | default(false)
+  block:
+    - name: "Create ~/.ssh of {{ u.user }}"
+      ansible.builtin.file:
+        path: "{{ __user.home }}/.ssh"
+        state: directory
+        owner: "{{ u.user }}"
+        group: "{{ __user.group | default(u.user) }}"
+        mode: "0700"
+
+    - name: "Copy git private key of {{ u.user }}"
+      ansible.builtin.copy:
+        src: "{{ ssh_directory_users_keys }}/{{ u.user }}/{{ u.user }}"
+        dest: "{{ __user.home }}/.ssh/id_rsa.git"
+        owner: "{{ u.user }}"
+        group: "{{ __user.group | default(u.user) }}"
+        mode: "0400"
+      no_log: true
+
+    - name: "SSH config for github.com of {{ u.user }}"
+      ansible.builtin.blockinfile:
+        path: "{{ __user.home }}/.ssh/config"
+        create: true
+        owner: "{{ u.user }}"
+        group: "{{ __user.group | default(u.user) }}"
+        mode: "0600"
+        marker: "# {mark} ANSIBLE MANAGED: github.com"
+        block: |
+          Host github.com
+            HostName github.com
+            IdentityFile ~/.ssh/id_rsa.git
+            IdentitiesOnly yes
+            User git

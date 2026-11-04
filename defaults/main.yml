@@ -1,5 +1,18 @@
 ---
-__ssh_directory_users_keys: /etc/ansible/files/pair_key
-__ssh_users: []
-
-
+# Directory on the CONTROLLER with keys: <dir>/<user>/<user>.pub and <dir>/<user>/<user> (private).
+ssh_directory_users_keys: /etc/ansible/files/pair_key
+# Users to manage (alias: user_names). Keys of an item:
+#   user        (required) login name
+#   state       present | absent (absent: user, home and sudoers file are removed)
+#   shell       default /bin/bash
+#   groups      list of extra groups (or "append": comma separated string, legacy)
+#   comment     GECOS
+#   sudo        true -> passwordless sudo via /etc/sudoers.d/<user>
+#   auth_key    true -> install <dir>/<user>/<user>.pub into authorized_keys
+#   keys        list of extra public keys (strings) for authorized_keys
+#   exclusive_keys  true -> authorized_keys contains only the managed keys
+#   path_key_pair   copy the key pair to <path>/id_rsa(.pub)
+#   git         true -> private key as ~/.ssh/id_rsa.git + ~/.ssh/config for github.com
+ssh_users: "{{ user_names | default([]) }}"
+users_default_shell: /bin/bash
+users_remove_home: true

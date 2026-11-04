@@ -1,0 +1,46 @@
+---
+dependency:
+  name: galaxy
+  enabled: false
+driver:
+  name: podman
+platforms:
+  - name: users-noble
+    image: docker.io/library/ubuntu:24.04
+    dockerfile: Dockerfile.j2
+    command: /lib/systemd/systemd
+    systemd: always
+  - name: users-resolute
+    image: docker.io/library/ubuntu:26.04
+    dockerfile: Dockerfile.j2
+    command: /lib/systemd/systemd
+    systemd: always
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        # Test-only keys generated for molecule.
+        ssh_directory_users_keys: "${MOLECULE_SCENARIO_DIRECTORY}/keys"
+        user_names:
+          - user: alice
+            sudo: true
+            auth_key: true
+            groups: [adm]
+            git: true
+          - user: bob
+            auth_key: true
+            keys: ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExtraKeyForMoleculeOnly0000000000000000000 extra"]
+            exclusive_keys: true
+            path_key_pair: /srv/bob-keys
+scenario:
+  test_sequence:
+    - destroy
+    - create
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - destroy
+verifier:
+  name: ansible

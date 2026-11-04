@@ -1,18 +1,18 @@
 ---
 galaxy_info:
   author: Ivan Pastir
-  description: Ansible role for managing Linux users, SSH keys, sudo privileges, and Git SSH configuration.
-  role_name: pastir.users
+  role_name: users
+  namespace: pastir
+  description: Manage Linux users, authorized SSH keys, sudo rights and Git SSH access
   license: MIT
-  min_ansible_version: 2.9
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+        - resolute
   galaxy_tags:
     - users
-    - user-management
     - ssh
     - sudo
-    - linux
-    - git
-    - ansible
-    - system
-
 dependencies: []

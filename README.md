@@ -1,75 +1,78 @@
 # Ansible Role: pastir.users
 
-This Ansible role manages Linux users, their SSH keys, sudo privileges, and optional Git SSH configuration.
+Manages Linux users: accounts, authorized SSH keys, passwordless sudo, an optional SSH key pair and Git (GitHub)
+SSH access. Users can also be removed.
 
 ## Requirements
-- Ansible >= 2.9
-- Community modules: `community.general`, `ansible.posix`
 
-## Role Variables
+- ansible-core >= 2.16, collections `ansible.posix`, `community.general` (`meta/requirements.yml`)
 
-| Variable                | Default                                 | Description                                                                 |
-|-------------------------|-----------------------------------------|-----------------------------------------------------------------------------|
-| `ssh_directory_users_keys`  | `/etc/ansible/files/pair_key`           | Directory where user SSH key pairs are stored.                              |
-| `user_names`            | `[]`                                    | List of users to manage. See below for structure.                           |
+## Variables
 
-Each user in `user_names` should be a dictionary with the following keys:
+| Variable | Default | Description |
+|---|---|---|
+| `ssh_directory_users_keys` | `/etc/ansible/files/pair_key` | Directory **on the controller** with `<user>/<user>.pub` and `<user>/<user>` |
+| `ssh_users` | `user_names` or `[]` | Users, see below (`user_names` is accepted as before) |
+| `users_default_shell` | `/bin/bash` | |
+| `users_remove_home` | `true` | Remove the home directory of `state: absent` users |
 
-- `user` (string, required): Username
-- `sudo` (bool, optional): Add user to sudoers (default: false)
-- `auth_key` (bool, optional): Add public key from `directory_users_keys` (default: false)
-- `key_pair` (bool, optional): Copy SSH key pair to user (default: false)
-- `append` (string, optional): Additional groups (default: '')
-- `shell` (string, optional): User shell (default: `/bin/bash`)
-- `git` (bool, optional): Setup Git SSH key and config (default: false)
-- `path_key_pair` (string, optional): Path to copy key pair (if needed)
+### User item
 
-### SSH Key Directory Structure
+| Key | Default | Description |
+|---|---|---|
+| `user` | — | **Required.** Login name |
+| `state` | `present` | `absent` removes the user, their home and their sudoers file |
+| `shell` | `users_default_shell` | |
+| `groups` | `[]` | Extra groups. The legacy `append: "a,b"` string still works |
+| `comment` | — | GECOS |
+| `sudo` | `false` | `true` creates `/etc/sudoers.d/<user>` with `NOPASSWD: ALL`. `false` removes it |
+| `auth_key` | `false` | Install `<dir>/<user>/<user>.pub` |
+| `keys` | `[]` | Additional public keys |
+| `exclusive_keys` | `false` | `authorized_keys` keeps only the managed keys |
+| `path_key_pair` | — | Copy the key pair to `<path>/id_rsa`, `<path>/id_rsa.pub` |
+| `git` | `false` | Private key as `~/.ssh/id_rsa.git` plus a `github.com` block in `~/.ssh/config` |
 
-The `directory_users_keys` directory must have the following structure for each user:
+Private keys are copied with `no_log`.
 
-```
-<ssh_directory_users_keys>/
-  └── <user_name>/
-      ├── <user_name>        # Private key (no extension)
-      └── <user_name>.pub    # Public key
-```
-
-For example, for user `alice`:
-```
-/etc/ansible/files/pair_key/alice/alice
-/etc/ansible/files/pair_key/alice/alice.pub
-```
-
-## Example Playbook
+## Example
 
 ```yaml
 - hosts: all
-  become: yes
+  become: true
   vars:
-    ssh_directory_users_keys: "/path_to_dir/authorized_key"
+    ssh_directory_users_keys: /etc/ansible/files/pair_key
     user_names:
-      - user: user1
+      - user: alice
         sudo: true
         auth_key: true
-        key_pair: false
-        append: ''
-        shell: /bin/bash
-        git: false
-      - user: user2
-        sudo: true
+      - user: deploy
         auth_key: true
-        key_pair: false
-        append: ''
-        shell: /bin/bash
-        git: false
+        git: true
+      - user: former.employee
+        state: absent
   roles:
     - pastir.users
 ```
 
+## Testing
+
+`molecule test` (24.04, 26.04, test-only keys in `molecule/default/keys`): creation, sudo, git access, exclusive
+keys, revoking sudo, removing a user.
+
+## Installation
+
+```yaml
+# requirements.yml
+roles:
+  - name: pastir.users
+    src: git+git@github.com:Pastir/ansible-role-users.git
+    version: main  # or a tag
+```
+
+```bash
+ansible-galaxy install -r requirements.yml
+```
+
 ## License
+
 MIT
-
-## Author Information
-Ivan Pastir
-
