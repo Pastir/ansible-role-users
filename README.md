@@ -5,7 +5,7 @@ SSH access. Users can also be removed.
 
 ## Requirements
 
-- ansible-core >= 2.16, collections `ansible.posix`, `community.general` (`meta/requirements.yml`)
+- ansible-core >= 2.16, collections `ansible.posix`, `community.general` (`requirements.yml` in the role root)
 
 ## Variables
 
@@ -67,10 +67,14 @@ roles:
   - name: pastir.users
     src: git+git@github.com:Pastir/ansible-role-users.git
     version: main  # or a tag
+# A role cannot install collections by itself: the project lists them (see requirements.yml in the role root).
+collections:
+  - name: ansible.posix
+  - name: community.general
 ```
 
 ```bash
-ansible-galaxy install -r requirements.yml
+ansible-galaxy install -r requirements.yml   # roles and collections
 ```
 
 ## License
